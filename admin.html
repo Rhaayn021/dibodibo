@@ -133,7 +133,7 @@ const DEF=[["Bayam","🥬","Daun","ikat",4000,40],["Kangkung","🌿","Daun","ika
 function seed(){const N=["Ibu Sari","Pak Hasan","Warung Mama Ela","Ibu Rina","Pak Yusuf","Resto Cengkeh","Ibu Nur","Kak Dewi"],A=["Ternate Tengah","Ternate Selatan","Ternate Utara","Kota Baru","Gambesi"];
  return Array.from({length:14},(_,i)=>({id:"FL"+(1040+i),d:Date.now()-i*6.5*36e5,nama:N[i%8],wa:"08123"+(100000+i*137),alamat:"Kel. "+A[i%5],slot:SL[i%4],bayar:PAY[i%3],
  items:[0,1,2].slice(0,2+i%2).map(k=>{const p=DEF[(i*3+k*5)%16],q=1+(i+k)%3;return{id:p.id,n:p.n,q,t:p.p*q}}),st:i<2?0:i<4?1:i<6?2:3})).map(o=>{o.sub=o.items.reduce((a,x)=>a+x.t,0);o.ongkir=o.sub>=GRATIS?0:ONGKIR;o.total=o.sub+o.ongkir;return o})}
-let P=DEF,O=seed(),cart={},page="dash",flt=-1,per="all";
+let P=DEF,O=seed(),cart={},page="dash",flt=0,per="all";
 try{const a=JSON.parse(localStorage.getItem("foli2_p")||"null"),b=JSON.parse(localStorage.getItem("foli2_o")||"null");if(a)P=a;if(b)O=b}catch(e){}
 const save=()=>{try{localStorage.setItem("foli2_p",JSON.stringify(P));localStorage.setItem("foli2_o",JSON.stringify(O))}catch(e){}};
 const toast=m=>{const t=$("#ts");t.textContent=m;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2200)};
@@ -184,9 +184,9 @@ function simpan(){const f=i=>$("#"+i).value.trim();
 
 // ===== Halaman: Pesanan =====
 function pesan(){const L=O.map((o,i)=>[o,i]).filter(x=>flt<0||x[0].st===flt);
- return `<div class="head"><div><h1>Pesanan</h1><p>Pantau dan ubah status pengantaran.</p></div></div>
- <div class="tabs">${["Semua",...ST].map((s,i)=>`<button class="${i-1===flt?"on":""}" data-f="${i-1}">${s}</button>`).join("")}</div>
- <div class="card tw"><table><tr><th>No</th><th>Pelanggan</th><th>Pesanan</th><th>Antar</th><th>Total</th><th>Status</th></tr>${L.map(([o,i])=>`<tr><td>${o.id}<br><small style="color:var(--mu)">${new Date(o.d).toLocaleDateString("id-ID")}</small></td><td>${esc(o.nama)}<br><small style="color:var(--mu)">${esc(o.wa)}<br>${esc(o.alamat)}</small></td><td>${o.items.map(x=>esc(x.n)+" ×"+x.q).join(", ")}</td><td>${esc(o.slot)}<br><small style="color:var(--mu)">${esc(o.bayar)}</small></td><td>${rp(o.total)}</td><td>${pill(o.st)}<select data-o="${i}" style="margin-top:6px;width:120px">${ST.map((s,k)=>`<option value="${k}" ${k===o.st?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")||'<tr><td colspan="6">Tidak ada pesanan.</td></tr>'}</table></div>`}
+ return `<div class="head"><div><h1>Pesanan</h1><p>Pindahkan pesanan ke tahap berikutnya dengan tombol aksi.</p></div></div>
+ <div class="tabs">${ST.map((s,i)=>`<button class="${i===flt?"on":""}" data-f="${i}">${s} (${O.filter(o=>o.st===i).length})</button>`).join("")}</div>
+ <div class="card tw"><table><tr><th>No</th><th>Pelanggan</th><th>Pesanan</th><th>Antar</th><th>Total</th><th>Status</th><th>Aksi</th></tr>${L.map(([o,i])=>`<tr><td>${o.id}<br><small style="color:var(--mu)">${new Date(o.d).toLocaleDateString("id-ID")}</small></td><td>${esc(o.nama)}<br><small style="color:var(--mu)">${esc(o.wa)}<br>${esc(o.alamat)}</small></td><td>${o.items.map(x=>esc(x.n)+" ×"+x.q).join(", ")}</td><td>${esc(o.slot)}<br><small style="color:var(--mu)">${esc(o.bayar)}</small></td><td>${rp(o.total)}</td><td>${pill(o.st)}</td><td style="white-space:nowrap">${o.st<3?`<button class="btn sm" data-nx="${i}">${["Proses","Antar","Selesaikan"][o.st]}</button>`:'<span style="color:var(--mu)">—</span>'}</td></tr>`).join("")||'<tr><td colspan="7">Tidak ada pesanan.</td></tr>'}</table></div>`}
 
 // ===== Halaman: Produk =====
 function produk(){return `<div class="head"><div><h1>Produk &amp; Stok</h1><p>Tambah, edit, hapus produk, atau ubah harga dan stok langsung. Stok di bawah 6 ditandai.</p></div><div class="sp"></div><button class="btn" data-pa>${ic("plus",16)}Tambah Produk</button></div>
@@ -242,7 +242,7 @@ const MD=document.createElement("div");MD.className="mdl";document.body.appendCh
 function mopen(title,body,ok,fn){MD.innerHTML=`<div class="mbox"><h3 style="margin:0 0 4px;font-size:18px">${title}</h3>${body}<p id="mer" style="color:var(--rd);min-height:18px;margin:8px 0"></p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ol" data-mx>Batal</button><button class="btn" data-mok>${ok}</button></div></div>`;MD._f=fn;MD.classList.add("on");const f=MD.querySelector("input");if(f)f.focus()}
 const mclose=()=>MD.classList.remove("on"),mv=id=>((MD.querySelector("#"+id)||{}).value||"").trim(),merr=m=>{MD.querySelector("#mer").textContent=m};
 async function cf(title,text,btn,danger){if(!window.Swal)return danger?confirm(title+"\n"+text):true;
- const r=await Swal.fire({title,text,icon:danger?"warning":"question",showCancelButton:true,confirmButtonText:btn,cancelButtonText:"Batal",confirmButtonColor:danger?"#ef4444":"#1B8A55",reverseButtons:true,focusCancel:!!danger});return r.isConfirmed}
+ const r=await Swal.fire({title,text,icon:danger?"warning":"question",showCancelButton:true,confirmButtonText:btn,cancelButtonText:"Tidak",confirmButtonColor:danger?"#ef4444":"#1B8A55",reverseButtons:true,focusCancel:true});return r.isConfirmed}
 async function cf2(title,text){if(!await cf(title,text,"Ya, lanjut",1))return false;if(!window.Swal)return true;
  const r=await Swal.fire({title:"Konfirmasi terakhir",html:"Ketik <b>HAPUS</b> untuk menghapus permanen.",icon:"error",input:"text",inputPlaceholder:"HAPUS",showCancelButton:true,confirmButtonText:"Hapus permanen",cancelButtonText:"Batal",confirmButtonColor:"#ef4444",reverseButtons:true,preConfirm:v=>{if((v||"").trim().toUpperCase()!=="HAPUS"){Swal.showValidationMessage("Ketik HAPUS dengan benar");return false}return true}});return r.isConfirmed}
 function uform(w){const u=w?allUsers().find(x=>x.wa===w):null;
@@ -270,6 +270,9 @@ document.addEventListener("click",async e=>{const c=s=>e.target.closest(s);let b
  if(c("[data-ua]"))return uform();
  if(b=c("[data-ue]"))return uform(b.dataset.ue);
  if(c("[data-pa]"))return pform();
+ if(b=c("[data-nx]")){const o=O[b.dataset.nx],n=o.st+1;if(n>3)return;
+  if(!await cf("Pindah proses?","Pesanan "+o.id+" ("+o.nama+") akan dipindah dari "+ST[o.st]+" ke "+ST[n]+". Lanjutkan?","Ya"))return;
+  o.st=n;alog("Ubah status pesanan",o.id+" → "+ST[n]);save();toast("Pesanan "+o.id+" menjadi "+ST[n]);return go("pesan")}
  if(b=c("[data-pe]"))return pform(b.dataset.pe);
  if(b=c("[data-ub]")){const w=b.dataset.ub,bl=ljs("foli_block",{}),nm=(allUsers().find(u=>u.wa===w)||{}).nama||w,on=!bl[w];
   if(!await cf(on?"Blokir pengguna?":"Aktifkan pengguna?",nm+" ("+w+")",on?"Ya, blokir":"Ya, aktifkan",on))return;

@@ -265,6 +265,8 @@ const UK="foli_users",US="foli_sess",OK="foli2_o",ST=["Baru","Diproses","Diantar
 const lj=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},sj=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const nw=s=>{s=String(s).replace(/\D/g,"");return s.slice(0,2)==="62"?"0"+s.slice(2):s};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function ulog(act,det,who){const L=lj("foli_log",[]);L.unshift({t:Date.now(),a:"user",who:who||(U?U.nama:"Tamu"),act,det:det||""});sj("foli_log",L.slice(0,300))}
+const isBlk=w=>!!lj("foli_block",{})[w];
 const UIC={home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',truck:'<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>',user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',back:'<path d="M19 12H5M12 19l-7-7 7-7"/>',out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',check:'<path d="M20 6L9 17l-5-5"/>',money:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'};
 const uic=(n,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${UIC[n]}</svg>`;
 let U=lj(US,null),upg="ring",uf=-1,ut=0;
@@ -275,7 +277,7 @@ const ubtn=()=>{$("#ubt").textContent=U?U.nama.split(" ")[0]:"Masuk"};
 
 // Simpan pesanan (dipanggil dari pesan() saat checkout)
 function saveOrd(id,s,o,f){const O=lj(OK,[]);
- O.unshift({id,d:Date.now(),nama:f("fn"),wa:f("fw"),alamat:f("fa"),slot:f("fs"),bayar:f("fp"),cat:f("fc"),items:Object.entries(cart).map(([i,n])=>{const p=pOf(i);return{id:+i,n:p.n,q:n,t:n*p.p}}),sub:s,ongkir:o,total:s+o,st:0});sj(OK,O)}
+ O.unshift({id,d:Date.now(),nama:f("fn"),wa:f("fw"),alamat:f("fa"),slot:f("fs"),bayar:f("fp"),cat:f("fc"),items:Object.entries(cart).map(([i,n])=>{const p=pOf(i);return{id:+i,n:p.n,q:n,t:n*p.p}}),sub:s,ongkir:o,total:s+o,st:0});sj(OK,O);ulog("Buat pesanan",id+" · "+rp(s+o),f("fn"))}
 
 // Halaman
 function pRing(){const L=mine(),c=s=>L.filter(o=>o.st===s).length,last=L[0];
@@ -302,35 +304,54 @@ function pAuth(){return `<div class="uauth"><div class="ucard uab"><div style="f
  <div class="utabs"><button class="${ut?"":"on"}" data-ua="0">Masuk</button><button class="${ut?"on":""}" data-ua="1">Daftar</button></div>
  ${ut?'<label>Nama</label><input id="un" autocomplete="name">':""}<label>No. WhatsApp</label><input id="uw" type="tel" inputmode="tel" autocomplete="tel"><label>PIN (4–6 angka)</label><input id="upin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
  <p id="uer"></p><button class="ubtn" style="width:100%" id="usb">${ut?"Daftar":"Masuk"}</button><button class="ubtn ol" style="width:100%;margin-top:8px" data-uc>Kembali ke toko</button></div></div>`}
-function urender(){const el=$("#uportal");if(!U){el.innerHTML=pAuth();return}
+function urender(){const el=$("#uportal");if(!U){el.innerHTML=otp?pOtp():pAuth();return}
  const T={ring:["Ringkasan",pRing],lacak:["Lacak Pesanan",pLacak],profil:["Profil Saya",pProfil]},N=[["ring","home"],["lacak","truck"],["profil","user"]];
  el.innerHTML=`<aside class="uside" id="uside"><div class="ulogo"><b>🥬 Fala Foli</b><small>Akun Pelanggan</small></div><div class="ugrp">MENU</div>
  ${N.map(n=>`<button class="unav ${upg===n[0]?"on":""}" data-up="${n[0]}">${uic(n[1])}<span>${T[n[0]][0]}</span></button>`).join("")}
  <div class="ugrp">LAINNYA</div><button class="unav" data-uc>${uic("back")}<span>Kembali Belanja</span></button><button class="unav" data-uo>${uic("out")}<span>Keluar</span></button></aside><div class="uscrim" id="uscrim"></div>
  <div class="umain"><div class="utop"><button class="uburg" id="uburg" aria-label="Menu">${uic("menu",24)}</button><div><h2>${T[upg][0]}</h2><small>Fala Foli · Sayur Segar</small></div><div class="usp"></div>
  <div class="uchip"><div class="uav">${esc(U.nama[0].toUpperCase())}</div><div class="uname"><b>${esc(U.nama)}</b><br><small>Pelanggan</small></div></div></div><div class="uwrap">${T[upg][1]()}</div></div>`}
-function uopen(){$("#uportal").classList.add("on");document.body.style.overflow="hidden";urender()}
-function uclose(){$("#uportal").classList.remove("on");document.body.style.overflow=""}
+function uopen(){$("#uportal").classList.add("on");document.body.style.overflow="hidden";if(U&&isBlk(U.wa)){U=null;try{localStorage.removeItem(US)}catch(x){}ubtn()}urender()}
+function uclose(){otp=null;$("#uportal").classList.remove("on");document.body.style.overflow=""}
+// ===== OTP (MODE DEMO: kode tampil di layar; ganti kirimOTP() dengan gateway SMS/WhatsApp agar benar-benar terkirim) =====
+const OTP_LEN=6,OTP_TTL=300000,OTP_CD=30000,OTP_MAX=5;let otp=null;
+function kirimOTP(w,kode){return Promise.resolve()} // TODO: panggil API gateway di sini
+function otpStart(mode,w,nm,p){otp={mode,w,nm,p};otpSend(true)}
+async function otpSend(first){const k=String(Math.floor(Math.random()*1e6)).padStart(OTP_LEN,"0");otp.code=k;otp.exp=Date.now()+OTP_TTL;otp.sent=Date.now();otp.tries=0;await kirimOTP(otp.w,k);ulog(first?"OTP dikirim":"OTP dikirim ulang","Nomor "+otp.w,otp.nm);urender()}
+function pOtp(){return `<div class="uauth"><div class="ucard uab"><div style="font-size:40px">🔐</div><h2 style="margin:4px 0">Verifikasi OTP</h2><p class="usub">Masukkan kode ${OTP_LEN} angka untuk nomor <b>${esc(otp.w)}</b>. Berlaku 5 menit.</p>
+ <div class="uinf" style="margin:0 0 8px"><div><small>Mode demo (belum ada gateway SMS/WhatsApp)</small>Kode Anda: <b style="font-size:20px;letter-spacing:4px">${otp.code}</b></div></div>
+ <label>Kode OTP</label><input id="uotp" inputmode="numeric" maxlength="${OTP_LEN}" autocomplete="one-time-code" style="letter-spacing:6px;text-align:center;font-size:18px"><p id="uer"></p>
+ <button class="ubtn" style="width:100%" id="uvf">Verifikasi</button><button class="ubtn ol" style="width:100%;margin-top:8px" data-uor>Kirim ulang kode</button><button class="ubtn ol" style="width:100%;margin-top:8px" data-uox>Batal</button></div></div>`}
+function otpVerify(){const v=$("#uotp").value.trim(),er=m=>{$("#uer").textContent=m};
+ if(Date.now()>otp.exp)return er("Kode kedaluwarsa. Kirim ulang kode.");
+ if(v!==otp.code){otp.tries++;ulog("OTP salah","Nomor "+otp.w,otp.nm);if(otp.tries>=OTP_MAX){otp=null;urender();return toast("Terlalu banyak percobaan. Ulangi dari awal.")}return er("Kode salah. Sisa percobaan: "+(OTP_MAX-otp.tries))}
+ const us=lj(UK,{}),o=otp;
+ if(o.mode==="reg"){if(us[o.w]){otp=null;urender();return toast("Nomor sudah terdaftar, silakan masuk.")}us[o.w]={nama:o.nm,pin:o.p,verified:Date.now()};sj(UK,us)}
+ otp=null;U={nama:us[o.w].nama,wa:o.w};sj(US,U);ulog(o.mode==="reg"?"Daftar akun (OTP terverifikasi)":"Masuk (OTP terverifikasi)","Nomor "+o.w);upg="ring";ubtn();urender()}
 function usubmit(){const nm=(($("#un")||{}).value||"").trim(),w=nw($("#uw").value),p=$("#upin").value.trim(),us=lj(UK,{}),er=m=>{$("#uer").textContent=m};
  if(w.length<9)return er("Nomor WhatsApp tidak valid.");if(!/^\d{4,6}$/.test(p))return er("PIN harus 4–6 angka.");
- if(ut){if(!nm)return er("Nama wajib diisi.");if(us[w])return er("Nomor sudah terdaftar, silakan masuk.");us[w]={nama:nm,pin:p};sj(UK,us)}
- else if(!us[w]||us[w].pin!==p)return er("Nomor atau PIN salah.");
- U={nama:us[w].nama,wa:w};sj(US,U);upg="ring";ubtn();urender()}
+ if(ut){if(!nm)return er("Nama wajib diisi.");if(us[w])return er("Nomor sudah terdaftar, silakan masuk.");}
+ else if(!us[w]||us[w].pin!==p){ulog("Masuk gagal","Nomor "+w,us[w]?us[w].nama:"Tamu");return er("Nomor atau PIN salah.")}
+ if(isBlk(w)){ulog("Masuk ditolak (diblokir)","Nomor "+w,(us[w]||{nama:nm}).nama);return er("Akun diblokir. Hubungi admin via WhatsApp.")}
+ otpStart(ut?"reg":"login",w,ut?nm:us[w].nama,p)}
 
 // Event
 document.addEventListener("click",e=>{const c=s=>e.target.closest(s);
  if(c("#ub"))return uopen();
  if(c("#ut")){$("#ov").classList.remove("on");upg="lacak";return uopen()}
  if(c("[data-uc]"))return uclose();
- if(c("[data-up]")){upg=c("[data-up]").dataset.up;uf=-1;return urender()}
+ if(c("[data-up]")){upg=c("[data-up]").dataset.up;uf=-1;if(upg==="lacak"&&U)ulog("Lihat lacak pesanan");return urender()}
  if(c("[data-uf]")){uf=+c("[data-uf]").dataset.uf;return urender()}
  if(c("[data-ua]")){ut=+c("[data-ua]").dataset.ua;return urender()}
  if(c("#usb"))return usubmit();
- if(c("[data-uo]")){U=null;try{localStorage.removeItem(US)}catch(x){}ubtn();return urender()}
+ if(c("#uvf"))return otpVerify();
+ if(c("[data-uor]")){const r=Math.ceil((otp.sent+OTP_CD-Date.now())/1000);if(r>0)return toast("Tunggu "+r+" detik untuk kirim ulang");return otpSend()}
+ if(c("[data-uox]")){otp=null;return urender()}
+ if(c("[data-uo]")){ulog("Keluar");U=null;try{localStorage.removeItem(US)}catch(x){}ubtn();return urender()}
  if(c("[data-ur]")){urender();return toast("Status diperbarui")}
  if(c("#uburg")){$("#uside").classList.add("open");$("#uscrim").classList.add("open")}
  if(c("#uscrim")){$("#uside").classList.remove("open");$("#uscrim").classList.remove("open")}});
-document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.closest("#uportal")&&$("#usb"))usubmit()});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.closest("#uportal")){if($("#uvf"))otpVerify();else if($("#usb"))usubmit()}});
 addEventListener("storage",e=>{if(e.key===OK&&U&&$("#uportal").classList.contains("on"))urender()});
 // Isi otomatis form checkout bila sudah login
 const _dw=drawer;drawer=function(k){_dw(k);if(U){if($("#fn")&&!$("#fn").value)$("#fn").value=U.nama;if($("#fw")&&!$("#fw").value)$("#fw").value=U.wa}};
